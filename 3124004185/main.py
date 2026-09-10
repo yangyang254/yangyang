@@ -1,6 +1,5 @@
-#这个版本先列好程序大纲
-
 import sys
+import re
 
 
 def read_file(file_path):
@@ -9,12 +8,27 @@ def read_file(file_path):
         return f.read()
 
 
-def calculate_similarity(text1, text2):
-    """计算两段文本的相似度，返回 0.00 ~ 1.00 之间的浮点数。
+def preprocess(text):
+    """文本预处理：转小写，去掉标点符号和空白字符。"""
+    text = text.lower()
+    text = re.sub(r'[^\w]', '', text)
+    return text
 
-    当前为占位实现，后续版本会替换为真正的查重算法。
+
+def calculate_similarity(text1, text2):
+    """计算两段文本的相似度，使用字符级 Jaccard 相似度。
+
+    相似度 = |交集| / |并集|
     """
-    return 0.00
+    set1 = set(preprocess(text1))
+    set2 = set(preprocess(text2))
+
+    if not set1 and not set2:
+        return 0.00
+
+    intersection = set1 & set2
+    union = set1 | set2
+    return len(intersection) / len(union)
 
 
 def write_result(file_path, similarity):
@@ -24,9 +38,8 @@ def write_result(file_path, similarity):
 
 
 def main():
-    # 参数数量校验：程序名 + 3 个路径 = 4 个参数
     if len(sys.argv) != 4:
-        print("用法: python main.py <原文文件> <抄袭版文件> <答案文件>")
+        print("用法: python main.py <s原文文件> <抄袭版文件> <答案文件>")
         sys.exit(1)
 
     orig_path = sys.argv[1]
