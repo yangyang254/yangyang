@@ -15,13 +15,33 @@ def preprocess(text):
     return text
 
 
-def calculate_similarity(text1, text2):
-    """计算两段文本的相似度，使用字符级 Jaccard 相似度。
+def get_ngrams(text, n=2):
+    """生成字符级 n-gram 集合。
 
-    相似度 = |交集| / |并集|
+    例如 text="abcd", n=2 -> {"ab", "bc", "cd"}
     """
-    set1 = set(preprocess(text1))
-    set2 = set(preprocess(text2))
+    if len(text) < n:
+        return set()
+    return {text[i:i + n] for i in range(len(text) - n + 1)}
+
+
+def calculate_similarity(text1, text2):
+    """计算两段文本的相似度，使用字符 2-gram 的 Jaccard 相似度。
+
+    对于极短文本（长度不足 2），退化为字符级集合比较。
+    """
+    p1 = preprocess(text1)
+    p2 = preprocess(text2)
+
+    if not p1 and not p2:
+        return 0.00
+
+    # 短文本退化处理
+    if len(p1) < 2 or len(p2) < 2:
+        set1, set2 = set(p1), set(p2)
+    else:
+        set1 = get_ngrams(p1, 2)
+        set2 = get_ngrams(p2, 2)
 
     if not set1 and not set2:
         return 0.00
@@ -39,7 +59,7 @@ def write_result(file_path, similarity):
 
 def main():
     if len(sys.argv) != 4:
-        print("用法: python main.py <s原文文件> <抄袭版文件> <答案文件>")
+        print("用法: python main.py <原文文件> <抄袭版文件> <答案文件>")
         sys.exit(1)
 
     orig_path = sys.argv[1]
