@@ -2,6 +2,10 @@ import sys
 import re
 
 
+# 模块级别预编译正则，避免每次调用都重新编译
+CLEAN_PATTERN = re.compile(r'[^\w]')
+
+
 def read_file(file_path):
     """读取文件内容，返回字符串。"""
     with open(file_path, 'r', encoding='utf-8') as f:
@@ -9,34 +13,33 @@ def read_file(file_path):
 
 
 def preprocess(text):
-    """文本预处理：转小写，去掉标点符号和空白字符。"""
-    text = text.lower()
-    text = re.sub(r'[^\w]', '', text)
-    return text
+    """文本预处理：转小写，去掉标点符号和空白字符。
+
+    使用预编译的 CLEAN_PATTERN，避免重复编译正则表达式。
+    """
+    return CLEAN_PATTERN.sub('', text.lower())
 
 
 def get_ngrams(text, n=2):
     """生成字符级 n-gram 集合。
 
-    例如 text="abcd", n=2 -> {"ab", "bc", "cd"}
+    使用 zip 一次性生成元组，避免使用字符串切片产生大量临时字符串。
+    例如 text="abcd", n=2 -> {("a","b"), ("b","c"), ("c","d")}
     """
     if len(text) < n:
         return set()
-    return {text[i:i + n] for i in range(len(text) - n + 1)}
+    return set(zip(*(text[i:] for i in range(n))))
 
 
 def calculate_similarity(text1, text2):
-    """计算两段文本的相似度，使用字符 2-gram 的 Jaccard 相似度。
-
-    对于极短文本（长度不足 2），退化为字符级集合比较。
-    """
+    """计算两段文本的相似度，使用字符 2-gram 的 Jaccard 相似度。"""
     p1 = preprocess(text1)
     p2 = preprocess(text2)
 
     if not p1 and not p2:
         return 0.00
 
-    # 短文本退化处理
+    # 短文本退化为字符级集合比较
     if len(p1) < 2 or len(p2) < 2:
         set1, set2 = set(p1), set(p2)
     else:
@@ -45,6 +48,10 @@ def calculate_similarity(text1, text2):
 
     if not set1 and not set2:
         return 0.00
+
+    # 短路优化：完全相同时直接返回 1.00
+    if set1 == set2:
+        return 1.00
 
     intersection = set1 & set2
     union = set1 | set2
